@@ -169,37 +169,45 @@ public final class GitMigrator implements Migrator {
 		try {
 			// add all untracked files
 			Status status = git.status().call();
+			if (!status.isClean()) {
 
-			Set<String> toAdd = handleAdded(status);
-			Set<String> toRestore = new HashSet<String>();
-			Set<String> toRemove = handleRemoved(status, toRestore);
+				Set<String> toAdd = handleAdded(status);
+				Set<String> toRestore = new HashSet<String>();
+				Set<String> toRemove = handleRemoved(status, toRestore);
 
-			// execute the git index commands if needed
-			if (!toAdd.isEmpty()) {
-				AddCommand add = git.add();
-				for (String filepattern : toAdd) {
-					add.addFilepattern(filepattern);
+				// execute the git index commands if needed
+				if (!toAdd.isEmpty()) {
+					AddCommand add = git.add();
+					for (String filepattern : toAdd) {
+						add.addFilepattern(filepattern);
+					}
+					add.call();
 				}
-				add.call();
-			}
-			if (!toRemove.isEmpty()) {
-				RmCommand rm = git.rm();
-				for (String filepattern : toRemove) {
-					rm.addFilepattern(filepattern);
+				if (!toRemove.isEmpty()) {
+					RmCommand rm = git.rm();
+					for (String filepattern : toRemove) {
+						rm.addFilepattern(filepattern);
+					}
+					rm.call();
 				}
-				rm.call();
-			}
-			if (!toRestore.isEmpty()) {
-				CheckoutCommand checkout = git.checkout();
-				for (String filepattern : toRestore) {
-					checkout.addPath(filepattern);
+				if (!toRestore.isEmpty()) {
+					CheckoutCommand checkout = git.checkout();
+					for (String filepattern : toRestore) {
+						checkout.addPath(filepattern);
+					}
+					checkout.call();
 				}
-				checkout.call();
-			}
 
-			// execute commit if something has changed
-			if (!toAdd.isEmpty() || !toRemove.isEmpty()) {
-				git.commit().setMessage(comment).setAuthor(ident).setCommitter(ident).call();
+				// execute commit if something has changed
+				if (!toAdd.isEmpty() || !toRemove.isEmpty()) {
+					git.commit().setMessage(comment).setAuthor(ident).setCommitter(ident).call();
+				}
+
+				// verify the status once again
+				Status afterCommitStatus = git.status().call();
+				if (!afterCommitStatus.isClean()) {
+					throw new RuntimeException("Status is not clean after commit");
+				}
 			}
 		} catch (RuntimeException e) {
 			throw e;
@@ -325,19 +333,19 @@ public final class GitMigrator implements Migrator {
 
 	void initialize(Properties props) {
 		properties = props;
-		defaultIdent = new PersonIdent(props.getProperty("user.name", "RTC 2 git"), props.getProperty("user.email",
-				"rtc2git@rtc.to"));
+		defaultIdent = new PersonIdent(props.getProperty("user.name", "RTC 2 git"),
+				props.getProperty("user.email", "rtc2git@rtc.to"));
 		parseElements(props.getProperty("ignore.file.extensions", ""), ignoredFileExtensions);
 		// update window cache config
 		WindowCacheConfig cfg = getWindowCacheConfig();
-		cfg.setPackedGitOpenFiles((int) parseConfigValue(props.getProperty("packedgitopenfiles"),
-				cfg.getPackedGitOpenFiles()));
+		cfg.setPackedGitOpenFiles(
+				(int) parseConfigValue(props.getProperty("packedgitopenfiles"), cfg.getPackedGitOpenFiles()));
 		cfg.setPackedGitLimit(parseConfigValue(props.getProperty("packedgitlimit"), cfg.getPackedGitLimit()));
-		cfg.setPackedGitWindowSize((int) parseConfigValue(props.getProperty("packedgitwindowsize"),
-				cfg.getPackedGitWindowSize()));
+		cfg.setPackedGitWindowSize(
+				(int) parseConfigValue(props.getProperty("packedgitwindowsize"), cfg.getPackedGitWindowSize()));
 		cfg.setPackedGitMMAP(Boolean.parseBoolean(props.getProperty("packedgitmmap")));
-		cfg.setDeltaBaseCacheLimit((int) parseConfigValue(props.getProperty("deltabasecachelimit"),
-				cfg.getDeltaBaseCacheLimit()));
+		cfg.setDeltaBaseCacheLimit(
+				(int) parseConfigValue(props.getProperty("deltabasecachelimit"), cfg.getDeltaBaseCacheLimit()));
 		long sft = parseConfigValue(props.getProperty("streamfilethreshold"), cfg.getStreamFileThreshold());
 		cfg.setStreamFileThreshold(getMaxFileThresholdValue(sft, Runtime.getRuntime().maxMemory()));
 	}

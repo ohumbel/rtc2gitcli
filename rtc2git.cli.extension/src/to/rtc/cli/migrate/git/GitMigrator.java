@@ -206,7 +206,14 @@ public final class GitMigrator implements Migrator {
 				// verify the status once again
 				Status afterCommitStatus = git.status().call();
 				if (!afterCommitStatus.isClean()) {
-					throw new RuntimeException("Status is not clean after commit");
+					StringBuilder m = new StringBuilder();
+					m.append("Status is not clean after commit ");
+					m.append(comment);
+					m.append('/');
+					m.append("\n" + ident);
+					m.append("\ntoAdd: " + toAdd);
+					m.append("\ntoRemove: " + toRemove);
+					throw new RuntimeException(m.toString());
 				}
 			}
 		} catch (RuntimeException e) {
@@ -425,4 +432,5 @@ public final class GitMigrator implements Migrator {
 			}
 		}
 	}
+
 }

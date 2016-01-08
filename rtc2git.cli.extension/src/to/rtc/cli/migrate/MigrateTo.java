@@ -78,11 +78,11 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 				timeout = Integer.parseInt(timeoutOptionValue);
 			}
 
-			final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument.create(
-					subargs.getOptionValue(MigrateToOptions.OPT_SRC_WS), config);
+			final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument
+					.create(subargs.getOptionValue(MigrateToOptions.OPT_SRC_WS), config);
 			SubcommandUtil.validateArgument(sourceWsOption, ItemType.WORKSPACE);
-			final ScmCommandLineArgument destinationWsOption = ScmCommandLineArgument.create(
-					subargs.getOptionValue(MigrateToOptions.OPT_DEST_WS), config);
+			final ScmCommandLineArgument destinationWsOption = ScmCommandLineArgument
+					.create(subargs.getOptionValue(MigrateToOptions.OPT_DEST_WS), config);
 			SubcommandUtil.validateArgument(destinationWsOption, ItemType.WORKSPACE);
 
 			// Initialize connection to RTC
@@ -95,8 +95,7 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			IWorkspace destinationWs = RepoUtil.getWorkspace(destinationWsOption.getItemSelector(), true, false, repo,
 					config);
 
-			// compare destination workspace with stream of source workspace to
-			// get tagging information
+			// compare destination workspace with stream of source workspace to get tagging information
 			output.writeLine("Get full history information from RTC. This could take a large amount of time.");
 			List<RtcTag> tags = createTagMap(repo, sourceWs, destinationWs);
 			Collections.sort(tags, new TagCreationDateComparator());
@@ -113,7 +112,8 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			Migrator migrator = getMigrator();
 			migrator.init(sandboxDirectory);
 
-			RtcMigrator rtcMigrator = new RtcMigrator(output, config, destinationWsOption.getStringValue(), migrator);
+			RtcMigrator rtcMigrator = new RtcMigrator(output, config, destinationWsOption.getStringValue(), migrator,
+					sandboxDirectory);
 			boolean isFirstTag = true;
 			int numberOfTags = tags.size();
 			int tagCounter = 0;
@@ -203,8 +203,8 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 		SnapshotSyncReport syncReport;
 		List<RtcTag> tagMap = new ArrayList<RtcTag>();
 		try {
-			IWorkspaceConnection sourceWsConnection = SCMPlatform.getWorkspaceManager(repo).getWorkspaceConnection(
-					sourceWs, getMonitor());
+			IWorkspaceConnection sourceWsConnection = SCMPlatform.getWorkspaceManager(repo)
+					.getWorkspaceConnection(sourceWs, getMonitor());
 
 			IWorkspaceHandle sourceStreamHandle = (IWorkspaceHandle) (sourceWsConnection.getFlowTable()
 					.getCurrentAcceptFlow().getFlowNode());
@@ -233,8 +233,8 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			output.writeLine("Get list of baselines and changesets form RTC took ["
 					+ (System.currentTimeMillis() - startTime) / 1000 + "]s.");
 			output.writeLine("Parse the list of baselines and changesets.");
-			HistoryEntryVisitor visitor = new HistoryEntryVisitor(new ChangeLogStreamOutput(config.getContext()
-					.stdout()), getLastChangeSetUuids(repo, sourceWs));
+			HistoryEntryVisitor visitor = new HistoryEntryVisitor(
+					new ChangeLogStreamOutput(config.getContext().stdout()), getLastChangeSetUuids(repo, sourceWs));
 
 			startTime = System.currentTimeMillis();
 			tagMap = visitor.acceptInto(changelog);

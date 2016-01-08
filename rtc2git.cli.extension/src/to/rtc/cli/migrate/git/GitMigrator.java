@@ -55,11 +55,13 @@ public final class GitMigrator implements Migrator {
 	private Properties properties;
 	private PersonIdent defaultIdent;
 	private File rootDir;
+	private int commitsAfterClean;
 
 	public GitMigrator(Properties properties) {
 		defaultCharset = Charset.forName("UTF-8");
 		ignoredFileExtensions = new HashSet<String>();
 		WindowCacheConfig = new WindowCacheConfig();
+		commitsAfterClean = 0;
 		initialize(properties);
 	}
 
@@ -216,11 +218,24 @@ public final class GitMigrator implements Migrator {
 					throw new RuntimeException(m.toString());
 				}
 			}
+
+			++commitsAfterClean;
 		} catch (RuntimeException e) {
 			throw e;
 		} catch (Exception e) {
 			throw new RuntimeException("Unable to commit changes", e);
 		}
+	}
+
+	@Override
+	public boolean needsIntermediateCleanup() {
+		return commitsAfterClean >= 1000;
+	}
+
+	@Override
+	public void intermediateCleanup() {
+		runGitGc();
+		commitsAfterClean = 0;
 	}
 
 	private Set<String> handleRemoved(Status status, Set<String> toRestore) {
@@ -231,8 +246,7 @@ public final class GitMigrator implements Migrator {
 			if (matcher.matches()) {
 				File jazzignore = new File(rootDir, matcher.group(1).concat(".jazzignore"));
 				if (jazzignore.exists()) {
-					// restore .gitignore files that where deleted if
-					// corresponding .jazzignore exists
+					// restore .gitignore files that where deleted if corresponding .jazzignore exists
 					toRestore.add(removed);
 					continue;
 				}
@@ -311,6 +325,9 @@ public final class GitMigrator implements Migrator {
 	private void initConfig() throws IOException {
 		StoredConfig config = git.getRepository().getConfig();
 		config.setBoolean("core", null, "ignoreCase", false);
+		config.setString("core", null, "autocrlf", File.separatorChar == '/' ? "input" : "true");
+		config.setBoolean("http", null, "sslverify", false);
+		config.setString("push", null, "default", "simple");
 		config.save();
 	}
 
@@ -396,13 +413,7 @@ public final class GitMigrator implements Migrator {
 	@Override
 	public void close() {
 		if (git != null) {
-			try {
-				git.gc().call();
-			} catch (GitAPIException e) {
-				e.printStackTrace();
-			} finally {
-				git.close();
-			}
+			runGitGc();
 		}
 		SortedSet<String> existingIgnoredFiles = getExistingIgnoredFiles();
 		if (!existingIgnoredFiles.isEmpty()) {
@@ -410,6 +421,16 @@ public final class GitMigrator implements Migrator {
 			for (String existingIgnoredEntry : existingIgnoredFiles) {
 				System.err.println(existingIgnoredEntry);
 			}
+		}
+	}
+
+	private void runGitGc() {
+		try {
+			git.gc().call();
+		} catch (GitAPIException e) {
+			e.printStackTrace();
+		} finally {
+			git.close();
 		}
 	}
 

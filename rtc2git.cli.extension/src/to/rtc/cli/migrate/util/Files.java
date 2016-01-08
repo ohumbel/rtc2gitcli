@@ -21,9 +21,8 @@ import java.util.List;
 public class Files {
 
 	/**
-	 * Reads all lines of the given <code>file</code> using the given character
-	 * set <code>cs</code> and returns them as a list without any of the line
-	 * separators.
+	 * Reads all lines of the given <code>file</code> using the given character set <code>cs</code> and returns them as
+	 * a list without any of the line separators.
 	 * 
 	 * @param file
 	 *            the file being read
@@ -53,10 +52,9 @@ public class Files {
 	}
 
 	/**
-	 * Writes all <code>lines</code> given to the <code>file</code> using the
-	 * given character set <code>cs</code> and optionally appends them to an
-	 * existing file, if <code>append</code> is set to <code>true</code>. The
-	 * default platform line separator will be used.
+	 * Writes all <code>lines</code> given to the <code>file</code> using the given character set <code>cs</code> and
+	 * optionally appends them to an existing file, if <code>append</code> is set to <code>true</code>. The default
+	 * platform line separator will be used.
 	 * 
 	 * @param file
 	 *            the file being written/appended
@@ -65,8 +63,7 @@ public class Files {
 	 * @param cs
 	 *            the character set used for writing
 	 * @param append
-	 *            <code>true</code> if a existing file should be appended,
-	 *            <code>false</code> otherwise
+	 *            <code>true</code> if a existing file should be appended, <code>false</code> otherwise
 	 * @throws IOException
 	 *             if the write operation fails
 	 */
@@ -84,6 +81,28 @@ public class Files {
 			}
 		} finally {
 			out.close();
+		}
+	}
+
+	/**
+	 * @param file
+	 */
+	public static void delete(File file) {
+		if (file.isDirectory()) {
+			if (file.list().length == 0) {
+				file.delete();
+			} else {
+				String files[] = file.list();
+				for (String temp : files) {
+					File fileDelete = new File(file, temp);
+					delete(fileDelete);
+				}
+				if (file.list().length == 0) {
+					file.delete();
+				}
+			}
+		} else {
+			file.delete();
 		}
 	}
 }

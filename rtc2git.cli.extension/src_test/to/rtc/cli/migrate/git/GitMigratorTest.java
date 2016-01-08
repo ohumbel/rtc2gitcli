@@ -24,6 +24,7 @@ import java.util.TreeSet;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.lib.StoredConfig;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.WindowCacheConfig;
 import org.junit.After;
@@ -121,6 +122,20 @@ public class GitMigratorTest {
 
 		checkGit("RTC 2 git", "rtc2git@rtc.to", "Initial commit");
 		assertEquals(GitMigrator.ROOT_IGNORED_ENTRIES, Files.readLines(new File(basedir, ".gitignore"), cs));
+	}
+
+	@Test
+	public void testInit_GitConfig() throws Exception {
+		git = Git.init().setDirectory(basedir).call();
+		StoredConfig config = git.getRepository().getConfig();
+
+		migrator.init(basedir);
+
+		config.load();
+		assertFalse(config.getBoolean("core", null, "ignorecase", true));
+		assertEquals(File.separatorChar == '/' ? "input" : "true", config.getString("core", null, "autocrlf"));
+		assertEquals("simple", config.getString("push", null, "default"));
+		assertFalse(config.getBoolean("http", null, "sslverify", true));
 	}
 
 	@Test
@@ -326,19 +341,19 @@ public class GitMigratorTest {
 
 	@Test
 	public void testGlobalIgnoredFilesAddedToRootGitIgnore() throws Exception {
-		props.setProperty("ignore.file.extensions", ".zip; .jar; .exe; .dll");
+		props.setProperty("ignore.file.extensions", ".zip; .jar; .exe; .dLL");
 		migrator.initialize(props);
 		migrator.init(basedir);
 
 		create(new File(basedir, "some.zip"));
 		create(new File(basedir, "subdir/some.jar"));
-		create(new File(basedir, "subdir/subsub/some.dll"));
+		create(new File(basedir, "subdir/subsub/some.dLL"));
 
 		migrator.commitChanges(TestChangeSet.INSTANCE);
 
 		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "4711 the checkin comment");
 		checkAllLines(new File(basedir, ".gitignore"), Arrays.asList("/.jazz5", "/.jazzShed", "/.metadata",
-				"/subdir/subsub/some.dll", "/some.zip", "/subdir/some.jar"));
+				"/subdir/subsub/some.dLL", "/some.zip", "/subdir/some.jar"));
 	}
 
 	@Test
